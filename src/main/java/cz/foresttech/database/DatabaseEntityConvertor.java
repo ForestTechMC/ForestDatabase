@@ -5,6 +5,7 @@ import cz.foresttech.database.processor.DatabaseValueProcessor;
 
 import java.lang.reflect.Field;
 import java.sql.Timestamp;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
@@ -236,8 +237,8 @@ public class DatabaseEntityConvertor {
      * @return a string representing a part of SQL script.
      */
     private <T> String processFieldsForScript(Class<T> clazz, T object, boolean forDelete) throws IllegalAccessException {
-        StringBuilder keys = new StringBuilder();
-        StringBuilder values = new StringBuilder();
+        List<String> keys = new ArrayList<>();
+        List<String> values = new ArrayList<>();
 
         for (Field field : clazz.getDeclaredFields()) {
             field.setAccessible(true);
@@ -253,15 +254,19 @@ public class DatabaseEntityConvertor {
             DatabaseValueProcessor valueProcessor = databaseAPI.getProcessor(field.getType());
 
             String processedValue = processFieldValue(fieldValue, valueProcessor);
-            keys.append(dbName).append(",");
-            values.append(processedValue).append(",");
+            keys.add(dbName);
+            values.add(processedValue);
         }
 
-        // Remove trailing commas
-        if (!keys.isEmpty()) keys.setLength(keys.length() - 1);
-        if (!values.isEmpty()) values.setLength(values.length() - 1);
+        if (keys.isEmpty()) return "";
 
-        return keys + " = " + values;
+        StringBuilder builder = new StringBuilder();
+        for (int i = 0; i < keys.size(); i++) {
+            builder.append(keys.get(i)).append(" = ").append(values.get(i)).append(", ");
+        }
+
+        builder.setLength(builder.length() - 2);
+        return builder.toString();
     }
 
     private <T> String getValuesFromField(Class<T> clazz, T object) throws IllegalAccessException {
