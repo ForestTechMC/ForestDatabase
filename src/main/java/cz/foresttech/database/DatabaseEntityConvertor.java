@@ -314,7 +314,7 @@ public class DatabaseEntityConvertor {
             value = processor.getValue(value);
         }
 
-        return (value instanceof String) ? "'" + escapeString((String) value) + "'" : value.toString();
+        return "'" + ((value instanceof String) ? escapeString((String) value) : value.toString()) + "'";
     }
 
     /**
