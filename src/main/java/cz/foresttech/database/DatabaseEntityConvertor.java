@@ -198,11 +198,15 @@ public class DatabaseEntityConvertor {
             return null;
         }
 
-        String columns = processFieldsForScript(clazz, object, false);
+        String columns = getColumnsFromField(clazz);
+        String values = getValuesFromField(clazz, object);
+
+        String updateSetValues = processFieldsForScript(clazz, object, false);
+
         String conflictPolicy = getConflictPolicy(clazz);
 
         return String.format("INSERT INTO %s (%s) VALUES (%s) ON CONFLICT (%s) DO UPDATE SET (%s);",
-                tableName, columns, columns, conflictPolicy, columns);
+                tableName, columns, values, conflictPolicy, updateSetValues);
     }
 
     /**
@@ -258,6 +262,42 @@ public class DatabaseEntityConvertor {
         if (!values.isEmpty()) values.setLength(values.length() - 1);
 
         return keys + " = " + values;
+    }
+
+    private <T> String getValuesFromField(Class<T> clazz, T object) throws IllegalAccessException {
+        StringBuilder values = new StringBuilder();
+
+        for (Field field : clazz.getDeclaredFields()) {
+            field.setAccessible(true);
+            Column column = field.getAnnotation(Column.class);
+            if (column == null) continue;
+            String dbName = getDbName(field, column);
+            Object fieldValue = field.get(object);
+            DatabaseValueProcessor valueProcessor = databaseAPI.getProcessor(field.getType());
+
+            String processedValue = processFieldValue(fieldValue, valueProcessor);
+            values.append(processedValue).append(",");
+        }
+
+        if (!values.isEmpty()) values.setLength(values.length() - 1);
+
+        return values.toString();
+    }
+
+    private <T> String getColumnsFromField(Class<T> clazz) {
+        StringBuilder keys = new StringBuilder();
+
+        for (Field field : clazz.getDeclaredFields()) {
+            field.setAccessible(true);
+            Column column = field.getAnnotation(Column.class);
+            if (column == null) continue;
+            String dbName = getDbName(field, column);
+            keys.append(dbName).append(",");
+        }
+
+        if (!keys.isEmpty()) keys.setLength(keys.length() - 1);
+
+        return keys.toString();
     }
 
     /**
