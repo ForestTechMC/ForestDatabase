@@ -438,7 +438,11 @@ public class DatabaseEntityConvertor {
             tableName = camelCaseToSnakeCase(clazz.getSimpleName());
         }
 
-        return tableName;
+        if (tableName.isEmpty()) {
+            return tableName;
+        }
+
+        return "\"" + tableName + "\"";
     }
 
     /**
