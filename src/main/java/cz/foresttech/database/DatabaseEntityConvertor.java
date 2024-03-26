@@ -182,7 +182,7 @@ public class DatabaseEntityConvertor {
             return null;
         }
 
-        String condition = processFieldsForScript(clazz, object, true);
+        String condition = processDeleteConditionScript(clazz, object);
         return String.format("DELETE FROM %s WHERE (%s);", tableName, condition);
     }
 
@@ -202,12 +202,10 @@ public class DatabaseEntityConvertor {
         String columns = getColumnsFromField(clazz);
         String values = getValuesFromField(clazz, object);
 
-        String updateSetValues = processFieldsForScript(clazz, object, false);
-
         String conflictPolicy = getConflictPolicy(clazz);
 
-        return String.format("INSERT INTO %s (%s) VALUES (%s) ON CONFLICT (%s) DO UPDATE SET (%s);",
-                tableName, columns, values, conflictPolicy, updateSetValues);
+        return String.format("INSERT INTO %s (%s) VALUES (%s) ON CONFLICT (%s) DO UPDATE SET (%s) = (%s);",
+                tableName, columns, values, conflictPolicy, columns, values);
     }
 
     /**
@@ -229,14 +227,13 @@ public class DatabaseEntityConvertor {
     }
 
     /**
-     * Processes fields of a class to generate a part of SQL script for insert, update, or delete operations.
+     * Processes fields of a class to generate a part of SQL script for delete operations.
      *
      * @param clazz the class whose fields are to be processed.
      * @param object the instance of the class.
-     * @param forDelete flag to indicate if the processing is for DELETE operation.
      * @return a string representing a part of SQL script.
      */
-    private <T> String processFieldsForScript(Class<T> clazz, T object, boolean forDelete) throws IllegalAccessException {
+    private <T> String processDeleteConditionScript(Class<T> clazz, T object) throws IllegalAccessException {
         List<String> keys = new ArrayList<>();
         List<String> values = new ArrayList<>();
 
@@ -244,7 +241,7 @@ public class DatabaseEntityConvertor {
             field.setAccessible(true);
 
             boolean isPrimaryKey = field.isAnnotationPresent(PrimaryKey.class);
-            if (forDelete && !isPrimaryKey) continue;
+            if (!isPrimaryKey) continue;
 
             Column column = field.getAnnotation(Column.class);
             if (column == null) continue;
@@ -260,13 +257,7 @@ public class DatabaseEntityConvertor {
 
         if (keys.isEmpty()) return "";
 
-        StringBuilder builder = new StringBuilder();
-        for (int i = 0; i < keys.size(); i++) {
-            builder.append(keys.get(i)).append(" = ").append(values.get(i)).append(", ");
-        }
-
-        builder.setLength(builder.length() - 2);
-        return builder.toString();
+        return "(" + keys + ") = (" + values + ")";
     }
 
     private <T> String getValuesFromField(Class<T> clazz, T object) throws IllegalAccessException {
