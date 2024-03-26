@@ -234,8 +234,8 @@ public class DatabaseEntityConvertor {
      * @return a string representing a part of SQL script.
      */
     private <T> String processDeleteConditionScript(Class<T> clazz, T object) throws IllegalAccessException {
-        List<String> keys = new ArrayList<>();
-        List<String> values = new ArrayList<>();
+        StringBuilder keys = new StringBuilder();
+        StringBuilder values = new StringBuilder();
 
         for (Field field : clazz.getDeclaredFields()) {
             field.setAccessible(true);
@@ -251,11 +251,14 @@ public class DatabaseEntityConvertor {
             DatabaseValueProcessor valueProcessor = databaseAPI.getProcessor(field.getType());
 
             String processedValue = processFieldValue(fieldValue, valueProcessor);
-            keys.add(dbName);
-            values.add(processedValue);
+            keys.append(dbName).append(",");
+            values.append(processedValue).append(",");
         }
 
         if (keys.isEmpty()) return "";
+
+        keys.setLength(keys.length() - 1);
+        values.setLength(values.length() - 1);
 
         return "(" + keys + ") = (" + values + ")";
     }
