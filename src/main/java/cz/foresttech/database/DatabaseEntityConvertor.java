@@ -23,13 +23,13 @@ public class DatabaseEntityConvertor {
      * Converts a DBRow to an instance of the specified class.
      *
      * @param clazz the class of the object to be created.
-     * @param row the DBRow object containing database column data.
+     * @param row   the DBRow object containing database column data.
      * @return an instance of T populated with data from the DBRow, or null in case of failure.
      */
     public <T> T convertToEntity(Class<T> clazz, DBRow row) {
         try {
             T instance = clazz.getDeclaredConstructor().newInstance();
-            Arrays.stream(clazz.getDeclaredFields())
+            getDeclaredFields(clazz)
                     .forEach(field -> populateFieldFromDBRow(instance, field, row));
             return instance;
         } catch (Exception e) {
@@ -42,8 +42,8 @@ public class DatabaseEntityConvertor {
      * Populates a field of an instance with the corresponding value from a DBRow.
      *
      * @param instance the object instance whose field is to be populated.
-     * @param field the field to be populated.
-     * @param row the DBRow object containing database column data.
+     * @param field    the field to be populated.
+     * @param row      the DBRow object containing database column data.
      */
     private <T> void populateFieldFromDBRow(T instance, Field field, DBRow row) {
         try {
@@ -84,8 +84,8 @@ public class DatabaseEntityConvertor {
     /**
      * Gets the value for a field from a DBRow.
      *
-     * @param field the field for which value is required.
-     * @param row the DBRow containing the data.
+     * @param field  the field for which value is required.
+     * @param row    the DBRow containing the data.
      * @param dbName the name of the database column.
      * @return the value corresponding to the field from the DBRow.
      */
@@ -172,7 +172,7 @@ public class DatabaseEntityConvertor {
     /**
      * Generates a SQL script to delete a specific record associated with a class instance.
      *
-     * @param clazz the class for which the DELETE script is required.
+     * @param clazz  the class for which the DELETE script is required.
      * @param object the instance of the class to identify the record to be deleted.
      * @return a DELETE SQL script for a specific record of the given class.
      */
@@ -189,7 +189,7 @@ public class DatabaseEntityConvertor {
     /**
      * Generates an SQL script for inserting or updating a record based on a class instance.
      *
-     * @param clazz the class for which the script is required.
+     * @param clazz  the class for which the script is required.
      * @param object the instance of the class for which the record is to be inserted or updated.
      * @return an INSERT or UPDATE SQL script for the given class instance.
      */
@@ -229,7 +229,7 @@ public class DatabaseEntityConvertor {
     /**
      * Processes fields of a class to generate a part of SQL script for delete operations.
      *
-     * @param clazz the class whose fields are to be processed.
+     * @param clazz  the class whose fields are to be processed.
      * @param object the instance of the class.
      * @return a string representing a part of SQL script.
      */
@@ -237,7 +237,7 @@ public class DatabaseEntityConvertor {
         StringBuilder keys = new StringBuilder();
         StringBuilder values = new StringBuilder();
 
-        for (Field field : clazz.getDeclaredFields()) {
+        for (Field field : getDeclaredFields(clazz)) {
             field.setAccessible(true);
 
             boolean isPrimaryKey = field.isAnnotationPresent(PrimaryKey.class);
@@ -266,7 +266,7 @@ public class DatabaseEntityConvertor {
     private <T> String getValuesFromField(Class<T> clazz, T object) throws IllegalAccessException {
         StringBuilder values = new StringBuilder();
 
-        for (Field field : clazz.getDeclaredFields()) {
+        for (Field field : getDeclaredFields(clazz)) {
             field.setAccessible(true);
             Column column = field.getAnnotation(Column.class);
             if (column == null) continue;
@@ -286,7 +286,7 @@ public class DatabaseEntityConvertor {
     private <T> String getColumnsFromField(Class<T> clazz) {
         StringBuilder keys = new StringBuilder();
 
-        for (Field field : clazz.getDeclaredFields()) {
+        for (Field field : getDeclaredFields(clazz)) {
             field.setAccessible(true);
             Column column = field.getAnnotation(Column.class);
             if (column == null) continue;
@@ -302,7 +302,7 @@ public class DatabaseEntityConvertor {
     /**
      * Processes the value of a field for inclusion in an SQL script.
      *
-     * @param value the value to be processed.
+     * @param value     the value to be processed.
      * @param processor the DatabaseValueProcessor for processing the value.
      * @return a string representation of the value suitable for SQL script.
      */
@@ -340,7 +340,7 @@ public class DatabaseEntityConvertor {
     private String getFieldsDefinition(Class<?> clazz) {
         StringBuilder definition = new StringBuilder();
 
-        for (Field field : clazz.getDeclaredFields()) {
+        for (Field field : getDeclaredFields(clazz)) {
             if (field.isAnnotationPresent(Column.class)) {
                 Column column = field.getAnnotation(Column.class);
                 String dbName = getDbName(field, column);
@@ -358,7 +358,7 @@ public class DatabaseEntityConvertor {
     /**
      * Determines the SQL type of a field based on its annotations and type.
      *
-     * @param field the field whose SQL type is needed.
+     * @param field  the field whose SQL type is needed.
      * @param column the Column annotation of the field.
      * @return a string representing the SQL type of the field.
      */
@@ -431,7 +431,7 @@ public class DatabaseEntityConvertor {
      * @return a string representing the primary key constraint for SQL CREATE TABLE script.
      */
     private String getPrimaryKeyConstraint(Class<?> clazz) {
-        List<String> primaryKeys = Arrays.stream(clazz.getDeclaredFields())
+        List<String> primaryKeys = getDeclaredFields(clazz).stream()
                 .filter(f -> f.isAnnotationPresent(PrimaryKey.class))
                 .map(f -> getDbName(f, f.getAnnotation(Column.class)))
                 .collect(Collectors.toList());
@@ -450,7 +450,7 @@ public class DatabaseEntityConvertor {
      * @return a string representing the primary key fields in snake case, or null if no primary keys are defined.
      */
     private static String getPrimaryKey(Class<?> clazz) {
-        return Arrays.stream(clazz.getDeclaredFields())
+        return getDeclaredFields(clazz).stream()
                 .filter(field -> field.isAnnotationPresent(PrimaryKey.class))
                 .map(field -> {
                     Column column = field.getAnnotation(Column.class);
@@ -487,7 +487,7 @@ public class DatabaseEntityConvertor {
     /**
      * Retrieves the database column name for a given field, based on its annotations.
      *
-     * @param field the field whose database column name is required.
+     * @param field  the field whose database column name is required.
      * @param column the Column annotation of the field.
      * @return the database column name in snake case.
      */
@@ -517,6 +517,23 @@ public class DatabaseEntityConvertor {
         }
 
         return input.replace("'", "''");
+    }
+
+    /**
+     * Retrieves all declared fields of a class, including inherited fields.
+     *
+     * @param clazz the class whose fields are required.
+     * @return a list of all declared fields of the class.
+     */
+    private static List<Field> getDeclaredFields(Class<?> clazz) {
+        List<Field> fieldList = new ArrayList<>();
+
+        if (clazz.getSuperclass() != null && clazz != Object.class) {
+            fieldList.addAll(getDeclaredFields(clazz.getSuperclass()));
+        }
+        fieldList.addAll(Arrays.asList(clazz.getDeclaredFields()));
+
+        return fieldList;
     }
 
 }
