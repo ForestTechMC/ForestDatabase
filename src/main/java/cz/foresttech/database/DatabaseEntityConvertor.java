@@ -4,6 +4,7 @@ import cz.foresttech.database.annotation.*;
 import cz.foresttech.database.processor.DatabaseValueProcessor;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -238,6 +239,9 @@ public class DatabaseEntityConvertor {
         StringBuilder values = new StringBuilder();
 
         for (Field field : getDeclaredFields(clazz)) {
+            if (Modifier.isStatic(field.getModifiers())) {
+                continue;
+            }
             field.setAccessible(true);
 
             boolean isPrimaryKey = field.isAnnotationPresent(PrimaryKey.class);
@@ -267,6 +271,9 @@ public class DatabaseEntityConvertor {
         StringBuilder values = new StringBuilder();
 
         for (Field field : getDeclaredFields(clazz)) {
+            if (Modifier.isStatic(field.getModifiers())) {
+                continue;
+            }
             field.setAccessible(true);
             Column column = field.getAnnotation(Column.class);
             if (column == null) continue;
@@ -287,6 +294,9 @@ public class DatabaseEntityConvertor {
         StringBuilder keys = new StringBuilder();
 
         for (Field field : getDeclaredFields(clazz)) {
+            if (Modifier.isStatic(field.getModifiers())) {
+                continue;
+            }
             field.setAccessible(true);
             Column column = field.getAnnotation(Column.class);
             if (column == null) continue;
